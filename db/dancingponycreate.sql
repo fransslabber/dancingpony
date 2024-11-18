@@ -26,13 +26,14 @@ CREATE DATABASE dancingpony;
 CREATE TABLE restaurants (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    path_name VARCHAR(255) NOT NULL,
     location VARCHAR(255)
 );
 
-INSERT INTO restaurants (name, location)
+INSERT INTO restaurants (name,path_name, location)
 VALUES 
-    ('The Orc Shack', 'The Docks'),
-    ('Meats Back On The Menu', 'Orc City');
+    ('The Orc Shack', 'OrcShack', 'The Docks'),
+    ('Meats Back On The Menu', 'MeatyMenu', 'Orc City');
 
 -- restaurant dishes
 CREATE TABLE restaurant_dishes (

@@ -2,7 +2,11 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"net/http"
+
+	sqldb "biz.orcshack/menu/db"
+	rest_api "biz.orcshack/menu/web"
 )
 
 type Error_Response struct {
@@ -12,16 +16,15 @@ type Error_Response struct {
 var ecdsakey *ecdsa.PrivateKey
 
 func routes() {
-	http.HandleFunc("GET /{tenant}/v1/registration", register)
-	http.HandleFunc("GET /{tenant}/v1/login", loginUser)
-	http.HandleFunc("GET /{tenant}/v1/logout", logoutUser)
+	http.HandleFunc("GET /{restaurant}/v1/register", rest_api.Register)
+	http.HandleFunc("GET /{restaurant}/v1/login", rest_api.Login)
 
-	// http.HandleFunc("/api/v1/audit", auditTrail)
-	// http.HandleFunc("/api/v1/form", formData)
-	// //http.HandleFunc("/api/v1/oauthcallback", OauthCallback)
-	// http.HandleFunc("/api/v1/plan_data", planData)
-	// http.HandleFunc("/api/v1/form_options", formOptions)
-	// http.HandleFunc("/api/v1/form_generator", formGenerator)
+	http.HandleFunc("GET /{restaurant}/v1/list_dishes", rest_api.List_Dishes)
+	http.HandleFunc("GET /{restaurant}/v1/view_dish", rest_api.View_Dish)
+	http.HandleFunc("GET /{restaurant}/v1/create_dish", rest_api.Create_Dish)
+	http.HandleFunc("GET /{restaurant}/v1/delete_dish", rest_api.Delete_Dish)
+	http.HandleFunc("GET /{restaurant}/v1/search_dish", rest_api.Search_Dish)
+	http.HandleFunc("GET /{restaurant}/v1/rate_dish", rest_api.Rate_Dish)
 
 }
 
@@ -32,15 +35,20 @@ func main() {
 	routes()
 	// Setup JWT signing key
 	// ecdsakey, err = GenerateECDSAKey()
+	// if err != nil {
+	// 	//sugar.Errorf("Could not generate ECDSA key: %+v", err)
+	// 	return
+	// }
+	err = sqldb.CreateDB()
 	if err != nil {
 		//sugar.Errorf("Could not generate ECDSA key: %+v", err)
 		return
 	}
+	defer sqldb.CloseDB()
 
-	srv := &http.Server{Addr: ":80", Handler: http.DefaultServeMux}
-
-	//sugar.Infof("Web Server started at localhost:80")
-	err = srv.ListenAndServe()
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Printf("Error starting server: %s\n", err)
+	}
 
 	// if err != http.ErrServerClosed {
 	// 	sugar.Fatalf("listen: %s", err)

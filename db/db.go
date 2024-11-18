@@ -19,6 +19,21 @@ type SqlDB struct {
 	db *pgxpool.Pool
 }
 
+var Global_db SqlDB
+
+func CreateDB() error {
+	err := Global_db.Open("")
+	if err != nil {
+		//sugar.Errorf("Could not generate ECDSA key: %+v", err)
+		return err
+	}
+	return nil
+}
+
+func CloseDB() {
+	Global_db.Close()
+}
+
 func (s *SqlDB) Open(file string) error {
 	var err error
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
