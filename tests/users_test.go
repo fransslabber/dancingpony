@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func _TestRegister(t *testing.T) {
+func TestRegister(t *testing.T) {
 
 	device_reg_url := "http://localhost:8080/OrcShack/v1/register"
 
@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 
 	device_reg_url := "http://localhost:8080/OrcShack/v1/login"
 
-	body := []byte("{ \"email\": \"test@test5.net\", \"password\": \"test1\"   }")
+	body := []byte("{ \"email\": \"test@test5.net\", \"password\": \"test\"   }")
 	r, err := http.NewRequest("GET", device_reg_url, bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Login failed, %v.", err)
@@ -51,6 +51,7 @@ func TestLogin(t *testing.T) {
 
 	defer res.Body.Close()
 
+	PrintResponse(res, t)
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("Login failed, %v.", err)
 	}
