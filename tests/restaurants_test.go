@@ -26,7 +26,7 @@ func TestCreateReview(t *testing.T) {
 
 	device_reg_url := "http://localhost:8080/OrcShack/v1/create_review"
 
-	body := []byte("{ \"review\": \"Went on a Monday night thinking we wouldnt have to book - it was full! But they found us a table in 5 mins...the food was great. Massive portions at a VERY good price. Woukd go again and recommend!\" , \"rating\": 4.98 }")
+	body := []byte("{ \"review\": \"Worst service ever, booked in advance upon arrival our spot was given to people that had no booking, the manager made no effort to rectify the issue but offered 'a complimentary something'. Not a way to treat any paying customer they can do better in their customer service\" , \"rating\": 4.98 }")
 
 	r, err := http.NewRequest("GET", device_reg_url, bytes.NewBuffer(body))
 	if err != nil {
