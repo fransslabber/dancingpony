@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,7 +32,13 @@ func Register(auth *TestAuth) error {
 
 	r.Header.Add("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // Bypass SSL verification (not recommended for production)
+			},
+		},
+	}
 	res, err := client.Do(r)
 	if err != nil {
 		return fmt.Errorf("registration do http request failed. %v", err)
@@ -58,7 +65,13 @@ func LoginUser(auth *TestAuth) error {
 
 	r.Header.Add("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // Bypass SSL verification (not recommended for production)
+			},
+		},
+	}
 	res, err := client.Do(r)
 	if err != nil {
 		return fmt.Errorf("login(%s,f%s) = %+v, %v http request failed.", auth.Email, auth.Password, res, err)
@@ -83,7 +96,7 @@ func LoginUser(auth *TestAuth) error {
 }
 
 func SetupLoginTest(tb testing.TB) (func(tb testing.TB), *TestAuth) {
-	testAuth := TestAuth{Email: "frans@gmail.com", Password: "frans", Srvr_url: "http://localhost:8080"}
+	testAuth := TestAuth{Email: "frans@gmail.com", Password: "frans", Srvr_url: "https://localhost:4443"}
 
 	// if err := Register(&testAuth); err != nil {
 	// 	tb.Fatalf(err.Error())

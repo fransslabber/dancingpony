@@ -10,7 +10,7 @@ func TestRegister(t *testing.T) {
 
 	device_reg_url := "http://localhost:8080/OrcShack/v1/register"
 
-	body := []byte("{\"name\": \"test\" , \"email\": \"test@test6.net\", \"password\": \"test\"   }")
+	body := []byte("{\"name\": \"test\" , \"email\": \"test99@test.net\", \"password\": \"test\"   }")
 	r, err := http.NewRequest("GET", device_reg_url, bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Device registration failed, %v.", err)
@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 
 	device_reg_url := "http://localhost:8080/OrcShack/v1/login"
 
-	body := []byte("{ \"email\": \"test@test5.net\", \"password\": \"test\"   }")
+	body := []byte("{ \"email\": \"test99@test.net\", \"password\": \"test\"   }")
 	r, err := http.NewRequest("GET", device_reg_url, bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Login failed, %v.", err)

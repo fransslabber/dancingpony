@@ -11,121 +11,55 @@ import (
 
 var jwtSecret = []byte("Eyeball of the Gargoyle") // Secret key for JWT
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		fmt.Printf("Auth token %v\n", authHeader)
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
+// Validate JWT token, return user id and role from token
+func ValidateJWT(r *http.Request) (uint32, string, error) {
+	authHeader := r.Header.Get("Authorization")
+	fmt.Printf("Auth token %v\n", authHeader)
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return 0, "", fmt.Errorf("authorization not present")
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	// Parse and validate the token
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		// Ensure the signing method is HMAC
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		// Parse and validate the token
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			// Ensure the signing method is HMAC
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-			}
-			return jwtSecret, nil
-		})
-
-		if err != nil || !token.Valid {
-			http.Error(w, "Unauthorized: Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		// Extract claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			http.Error(w, "Unauthorized: Invalid claims", http.StatusUnauthorized)
-			return
-		}
-
-		// Validate `user_id`
-		userID, ok := claims["user_id"].(float64) // JWT stores numbers as float64
-		if !ok || userID <= 0 {
-			http.Error(w, "Unauthorized: Invalid user ID", http.StatusUnauthorized)
-			return
-		}
-
-		// Validate expiration (`exp`) claim
-		exp, ok := claims["exp"].(float64) // JWT stores numeric values as float64
-		if !ok {
-			http.Error(w, "Unauthorized: Expiration claim missing", http.StatusUnauthorized)
-			return
-		}
-
-		// Check if the token has expired
-		if time.Now().Unix() > int64(exp) {
-			http.Error(w, "Unauthorized: Token has expired", http.StatusUnauthorized)
-			return
-		}
-
-		// Proceed to the next handler
-		next.ServeHTTP(w, r)
+		return jwtSecret, nil
 	})
-}
 
-func AuthAdminMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		fmt.Printf("Auth token %v\n", authHeader)
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+	if err != nil || !token.Valid {
+		return 0, "", fmt.Errorf("unauthorized: Invalid token")
+	}
 
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		// Parse and validate the token
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			// Ensure the signing method is HMAC
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-			}
-			return jwtSecret, nil
-		})
+	// Extract claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, "", fmt.Errorf("unauthorized: Invalid claims")
+	}
 
-		if err != nil || !token.Valid {
-			http.Error(w, "Unauthorized: Invalid token", http.StatusUnauthorized)
-			return
-		}
+	// Validate `user_id`
+	userID, ok := claims["user_id"].(float64) // JWT stores numbers as float64
+	if !ok || userID <= 0 {
+		return 0, "", fmt.Errorf("unauthorized: Invalid user ID")
+	}
 
-		// Extract claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			http.Error(w, "Unauthorized: Invalid claims", http.StatusUnauthorized)
-			return
-		}
+	// Validate expiration (`exp`) claim
+	exp, ok := claims["exp"].(float64) // JWT stores numeric values as float64
+	if !ok {
+		return 0, "", fmt.Errorf("unauthorized: Expiration claim missing")
+	}
 
-		// Validate `user_id`
-		userID, ok := claims["user_id"].(float64) // JWT stores numbers as float64
-		if !ok || userID <= 0 {
-			http.Error(w, "Unauthorized: Invalid user ID", http.StatusUnauthorized)
-			return
-		}
+	// Check if the token has expired
+	if time.Now().Unix() > int64(exp) {
+		return 0, "", fmt.Errorf("unauthorized: Token has expired")
+	}
 
-		// Mock user role validation (e.g., check against database)
-		role, ok := claims["role"].(string)
-		if !ok || role == "customer" {
-			http.Error(w, "Unauthorized: No permission not found", http.StatusUnauthorized)
-			return
-		}
+	role, ok := claims["role"].(string)
+	if !ok {
+		return 0, "", fmt.Errorf("unauthorized: No role not found")
+	}
 
-		// Validate expiration (`exp`) claim
-		exp, ok := claims["exp"].(float64) // JWT stores numeric values as float64
-		if !ok {
-			http.Error(w, "Unauthorized: Expiration claim missing", http.StatusUnauthorized)
-			return
-		}
-
-		// Check if the token has expired
-		if time.Now().Unix() > int64(exp) {
-			http.Error(w, "Unauthorized: Token has expired", http.StatusUnauthorized)
-			return
-		}
-
-		// Proceed to the next handler
-		next.ServeHTTP(w, r)
-	})
+	return uint32(userID), role, nil
 }

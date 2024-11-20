@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// DB Dish access
 type Dish struct {
 	Id            uint32    `json:"id"`
 	Name          string    `json:"name"`
@@ -90,5 +91,85 @@ func (d *SqlDB) View_dish(id uint32, restaurant string) (*Dish, error) {
 
 func (d *SqlDB) Delete_dish(id uint32, restaurant string) error {
 	_, err := d.db.Exec(context.Background(), "DELETE FROM restaurant_dishes where id = $1 AND (select id from restaurants where path_name = $2) = restaurant_id;", id, restaurant)
+	return err
+}
+
+// Rate limited dish rating by user
+// Allow one active rating per user per dish
+type User_Dish_Rating struct {
+	Id            uint32    `json:"id"`
+	Restaurant_id uint32    `json:"restaurant_id"`
+	Dish_id       uint32    `json:"dish_id"`
+	User_id       uint32    `json:"user_id"`
+	Rating        float32   `json:"rating"`
+	Date_created  time.Time `json:"date_created"`
+	Date_updated  time.Time `json:"date_updated"`
+}
+
+type Array_User_Dish_Ratings []*User_Dish_Rating
+
+func (d *SqlDB) Create_user_dish_rating(udr *User_Dish_Rating, restaurant string) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Begin the transaction
+	tx, err := d.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+	defer func() {
+		// Ensure rollback in case of panic or error
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+	}()
+
+	// Step 1: Update the user dish rating if they exist
+	res, err := tx.Exec(ctx, "UPDATE user_dish_ratings set rating = $1 WHERE "+
+		" restaurant_id = (select id from restaurants where path_name = $2) AND user_id = $3 AND dish_id = $4;",
+		udr.Rating, restaurant, udr.Dish_id, udr.User_id)
+	if err != nil {
+		return fmt.Errorf("failed to update user dish rating: %v", err)
+	}
+
+	// Step 2: Check if the update affected any rows
+	if res.RowsAffected() == 0 {
+		// If no rows were updated, insert a new user dish rating
+		_, err := tx.Exec(ctx, "INSERT INTO user_dish_ratings (restaurant_id, dish_id, user_id, rating)"+
+			" VALUES ((select id from restaurants where path_name = $1), $2, $3, $4 );",
+			restaurant, udr.Dish_id, udr.User_id, udr.Rating)
+		if err != nil {
+			return fmt.Errorf("failed to insert new user dish rating: %v", err)
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+
+	return nil
+}
+
+// DB Store multiple dish images per dish
+type Dish_Image struct {
+	Id           uint32    `json:"id"`
+	Dish_id      uint32    `json:"dish_id"`
+	Filename     string    `json:"filename"`
+	Content      []byte    `json:"content"`
+	Date_created time.Time `json:"date_created"`
+}
+
+type Array_Dish_Images []*Dish_Image
+
+func (d *SqlDB) Create_dish_images(dish_id uint32, filename string, content []byte, restaurant string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := d.db.Exec(ctx, "INSERT INTO dish_images (dish_id, filename, content)"+
+		" VALUES ($1, $2, $3);",
+		dish_id, filename, content)
 	return err
 }

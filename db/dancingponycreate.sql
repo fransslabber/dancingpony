@@ -1,28 +1,4 @@
--- Terminate existing connections to the database
-DO
-$$
-BEGIN
-    IF EXISTS (
-        SELECT FROM pg_database WHERE datname = 'dancingpony'
-    ) THEN
-        -- Terminate connections to the database
-        PERFORM pg_terminate_backend(pg_stat_activity.pid)
-        FROM pg_stat_activity
-        WHERE pg_stat_activity.datname = 'dancingpony'
-          AND pid <> pg_backend_pid();
-        
-        -- Drop the database
-        EXECUTE 'DROP DATABASE dancingpony';
-    END IF;
-END
-$$;
-
--- Create the new database
-CREATE DATABASE dancingpony;
-
-\c dancingpony
-
--- tenants/restaurants
+-- restaurants
 CREATE TABLE restaurants (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -47,27 +23,9 @@ CREATE TABLE restaurant_dishes (
     rating NUMERIC(3, 2) CHECK (rating >= 1.00 AND rating <= 5.00), -- Rating from 1.00 to 5.00
     restaurant_id INTEGER NOT NULL, -- ID of the restaurant the dish belongs to
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Creation timestamp
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Last update timestamp
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Last update timestamp
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
 );
-
-ALTER TABLE restaurant_dishes
-ADD CONSTRAINT fk_restaurant
-FOREIGN KEY (restaurant_id)
-REFERENCES restaurants (id)
-ON DELETE CASCADE;
-
--- CREATE OR REPLACE FUNCTION update_updated_at_column()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     NEW.updated_at = CURRENT_TIMESTAMP;
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- CREATE TRIGGER set_updated_at
--- BEFORE UPDATE ON restaurant_dishes
--- FOR EACH ROW
--- EXECUTE FUNCTION update_updated_at_column();
 
 -- Dishes for Restaurant 1
 INSERT INTO restaurant_dishes (name, description, price, category, is_vegetarian, is_available, rating, restaurant_id)
@@ -87,6 +45,14 @@ VALUES
     ('Cheesecake', 'Rich and creamy cheesecake.', 6.99, 'Dessert', TRUE, TRUE, 4.95, 2),
     ('BBQ Chicken Pizza', 'Pizza topped with BBQ sauce and chicken.', 11.50, 'Main Course', FALSE, TRUE, 4.75, 2);
 
+CREATE TABLE dish_images (
+    id SERIAL PRIMARY KEY,
+    dish_id INTEGER NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    content BYTEA NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dish_id) REFERENCES restaurant_dishes(id) ON DELETE CASCADE
+);
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -105,13 +71,38 @@ CREATE TABLE users (
 
 INSERT INTO users (name, email, role, restaurant_id, hashed_password, salt)
 VALUES 
-    ('Frans Slabber', 'frans@byeboer@gmail.com', 'admin', NULL, crypt('secure_password_1', gen_salt('bf')), gen_salt('bf'));
-    -- ('Bob Chef', 'bob@pizzapalace.com', 'chef', 1, crypt('secure_password_2', gen_salt('bf')), gen_salt('bf')),
-    -- ('Charlie Admin', 'charlie@admin.com', 'admin', NULL, crypt('secure_password_3', gen_salt('bf')), gen_salt('bf')),
-    -- ('Diana Staff', 'diana@pastaheaven.com', 'staff', 2, crypt('secure_password_4', gen_salt('bf')), gen_salt('bf'));
+    ('Frans Slabber', 'byeboer@gmail.com', 'admin', NULL, crypt('frans', gen_salt('bf')), gen_salt('bf')),
+    ('Frodo Slabber', 'frodo@gmail.com', 'admin', 1, crypt('frodo', gen_salt('bf')), gen_salt('bf'));
 
+-- Customer reviews
+CREATE TABLE restaurant_reviews (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    review TEXT NOT NULL,
+    rating NUMERIC(3, 2) CHECK (rating >= 1.00 AND rating <= 5.00), -- Rating from 1.00 to 5.00
+    sentiment_score NUMERIC,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE    
+);
 
--- SELECT * 
--- FROM users
--- WHERE email = 'alice@pizzapalace.com'
---   AND hashed_password = crypt('secure_password_1', hashed_password);
+INSERT INTO restaurant_reviews (restaurant_id, user_id, review, rating, sentiment_score) 
+    VALUES
+        ((select id from restaurants where path_name = 'OrcShack'), 2, 'Situated inconspicuously above Van Rensburgs - every carnivore favourite meat emporium - Kafe Serefe has access to the best quality meat in town.  Their creamy beef stroganoff is a huge favorite  and their generous helpings allow for a doggie bag evening snack.  We do miss dear Erica Arries, the warm and engaging manager who passed away too soon.', 3.30, 0.00 );
+        ((select id from restaurants where path_name = 'OrcShack'), 2, 'Went on a Monday night thinking we wouldnt have to book - it was full! But they found us a table in 5 mins...the food was great. Massive portions at a VERY good price. Woukd go again and recommend!', 3.30, 0.00 );
+
+-- User rating for dish
+CREATE TABLE user_dish_ratings (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER NOT NULL,
+    dish_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    rating NUMERIC(3, 2) CHECK (rating >= 1.00 AND rating <= 5.00), -- Rating from 1.00 to 5.00
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+    FOREIGN KEY (dish_id) REFERENCES restaurant_dishes(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

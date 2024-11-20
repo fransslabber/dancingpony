@@ -23,6 +23,7 @@ type LoginUser_ResponseUser struct {
 	JWT string `json:"jwt"`
 }
 
+// Register a new user, no auth required
 func Register(w http.ResponseWriter, r *http.Request) {
 	var user sqldb.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -42,6 +43,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Login validation, checks email and password, if ok, returns a JWT, for use in all other calls
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user sqldb.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -54,7 +56,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(Error_Response{ErrorDetails{Code: 002, Message: fmt.Sprintf("Authentication failed: %v", err)}})
+			json.NewEncoder(w).Encode(Error_Response{ErrorDetails{Code: 002, Message: fmt.Sprintf("authentication failed: %v", err)}})
 		} else {
 			if is_authenticated {
 				// Return JWT
@@ -78,7 +80,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			} else {
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(Error_Response{ErrorDetails{Code: 401, Message: "Authentication failed."}})
+				json.NewEncoder(w).Encode(Error_Response{ErrorDetails{Code: 401, Message: "authentication failed."}})
 			}
 		}
 	}

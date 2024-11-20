@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// User DB access
 type User struct {
 	Id            uint32
 	Name          string `json:"name"`
@@ -19,12 +20,16 @@ type User struct {
 
 type Array_Users []*User
 
+// Register a new user via api - role can only customer
+// For other roles need admin restricted access
+// Hashed password in DB, has separate salt column - used depending on hash algo
 func (d *SqlDB) Create_user(name string, email string, password string, restaurant string) error {
 	_, err := d.db.Exec(context.Background(), "INSERT INTO users (name, email, role, restaurant_id, hashed_password, salt)"+
 		" VALUES ($1, $2, 'customer',(select id from restaurants where path_name = $3), crypt($4, gen_salt('bf')), '');", name, email, restaurant, password)
 	return err
 }
 
+// Authenticate user, return true/false and user details
 func (d *SqlDB) Login_user(email string, password string, restaurant string) (bool, *User, error) {
 	var is_authenticated bool
 	user := User{}
