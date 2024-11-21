@@ -14,7 +14,7 @@ var jwtSecret = []byte("Eyeball of the Gargoyle") // Secret key for JWT
 // Validate JWT token, return user id and role from token
 func ValidateJWT(r *http.Request) (uint32, string, error) {
 	authHeader := r.Header.Get("Authorization")
-	fmt.Printf("Auth token %v\n", authHeader)
+	//fmt.Printf("Auth token %v\n", authHeader)
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return 0, "", fmt.Errorf("authorization not present")
 	}

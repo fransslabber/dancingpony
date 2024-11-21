@@ -242,7 +242,7 @@ CREATE TABLE public.users (
     name character varying(255) NOT NULL,
     email character varying(255) NOT NULL,
     role character varying(50) NOT NULL,
-    restaurant_id integer,
+    restaurant_id integer NOT NULL,
     hashed_password text NOT NULL,
     salt text NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,

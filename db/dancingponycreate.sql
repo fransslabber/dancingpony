@@ -62,7 +62,7 @@ CREATE TABLE users (
     name VARCHAR(255) NOT NULL, -- User's full name
     email VARCHAR(255) NOT NULL UNIQUE, -- User's email, must be unique
     role VARCHAR(50) NOT NULL, -- User's role (e.g., admin, manager, chef, etc.)
-    restaurant_id INTEGER, -- Restaurant ID the user is associated with (nullable for system-wide roles)
+    restaurant_id INTEGER NOT NULL, -- Restaurant ID the user is associated with (0 for system-wide roles)
     hashed_password TEXT NOT NULL, -- Hashed version of the user's password
     salt TEXT NOT NULL, -- Salt used for password hashing
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of account creation

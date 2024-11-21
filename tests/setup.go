@@ -96,7 +96,7 @@ func LoginUser(auth *TestAuth) error {
 }
 
 func SetupLoginTest(tb testing.TB) (func(tb testing.TB), *TestAuth) {
-	testAuth := TestAuth{Email: "frans@gmail.com", Password: "frans", Srvr_url: "https://localhost:4443"}
+	testAuth := TestAuth{Email: "frans@outer.space", Password: "frans", Srvr_url: "https://localhost:4443"}
 
 	// if err := Register(&testAuth); err != nil {
 	// 	tb.Fatalf(err.Error())
